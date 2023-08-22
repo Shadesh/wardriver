@@ -1,0 +1,3 @@
+enforce_checksums=no
+sb_bw16=yes
+
