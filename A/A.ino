@@ -1,7 +1,7 @@
-//Joseph Hewitt 2023
+//Joseph Hewitt & Shade 2023
 //This code is for the ESP32 "Side A" of the wardriver hardware revision 3.
 
-const String VERSION = "1.2.0b3";
+const String VERSION = "1.0b1";
 
 #include <GParser.h>
 #include <MicroNMEA.h>
@@ -18,15 +18,7 @@ const String VERSION = "1.2.0b3";
 
 #include <Wire.h>
 #include <Adafruit_GFX.h>
-//#include <Adafruit_SSD1306.h>
-//#define SCREEN_WIDTH 128 // OLED display width, in pixels
-//#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-//#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
-//Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
 #include <Adafruit_SH1106.h>
-//#define OLED_SDA 21
-//#define OLED_SCL 22
 Adafruit_SH1106 display(21, 22);
 
 //The stack size is insufficient for the OTA hashing calls. This is 10K, instead of the default 8K.
@@ -67,8 +59,8 @@ File filewriter;
 Preferences preferences;
 unsigned long bootcount = 0;
 
-String default_ssid = "wardriver.uk";
-const char* default_psk = "wardriver.uk";
+String default_ssid = "wardriver";
+const char* default_psk = "wardriverpsk";
 
 /* The recently seen MAC addresses and cell towers are saved into these arrays so that the 
  * wardriver can detect if they have already been written to the Wigle CSV file.
@@ -153,50 +145,75 @@ boolean use_fallback_cert = false;
 
 static const char *PRIMARY_OTA_CERT = R"EOF(
 -----BEGIN CERTIFICATE-----
-MIIDeTCCAmGgAwIBAgIUbrbwBJuNsr7DeScXZxaUynePHfowDQYJKoZIhvcNAQEL
-BQAwTDELMAkGA1UEBhMCTkwxCzAJBgNVBAgMAlpIMRUwEwYDVQQKDAx3YXJkcml2
-ZXIudWsxGTAXBgNVBAMMEG90YS53YXJkcml2ZXIudWswHhcNMjMwNjA4MjAwMTQ1
-WhcNMjUwMTI4MjAwMTQ1WjBMMQswCQYDVQQGEwJOTDELMAkGA1UECAwCWkgxFTAT
-BgNVBAoMDHdhcmRyaXZlci51azEZMBcGA1UEAwwQb3RhLndhcmRyaXZlci51azCC
-ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBANhPWzq8txiMt4IJikuZnNov
-6rAvAM3OicSKofdkOuvNOV6HlVmfzYVNNlESakuloEYRPwF7oxhQEPeU2X2jsQK6
-cCuWrAR2SWPTJ1kk+gNMx7Xq7GOU11wuHFJNRESdOCSCvixCjg/fbMb0Zmt9z/gX
-Rur0Pg/uYEcUgFyJ8KYgDh7m7chCfcFafhQ5RnkXpMINBZX+GmC/BQ57uZhrdTyY
-x5ZnjrLjzvjgLmABRTynCELPDjosfquxW+fHoG48qk4QLMhu/f8JItOce5kmIvS+
-v/766LN2gVK7oYlWjN44Sa/5hlp6Rl2YXGayYOAiivuyr/vniG0xoi2LBe1/WtsC
-AwEAAaNTMFEwHQYDVR0OBBYEFF5wxZNmrWN8/a2a0fAPmJJ/m+OaMB8GA1UdIwQY
-MBaAFF5wxZNmrWN8/a2a0fAPmJJ/m+OaMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZI
-hvcNAQELBQADggEBACpF2qkQd40MLWkMDYaoZFYeZMMt7ktsRAjo6P5HNVAQMdMz
-i9GtYLiXNFyw/Ub0X0JFwZDiqFSKcxJIWx5hgEVTSIvg36ZCRmrP1gmcVtzLbgjG
-oTlYBrUQdeH0KYG+7xMdPJI4+8yc3OXsoZjr4tIlbZJtej6OBipZks645BKUAs3a
-NUVm7tvzg9hEsfPDXXubcK6JLPdNwrnVEmwq6NlKVVHN9McExBumGKnyKYGK8MZF
-KwkScjhM4MVp5+qVrnuZgqkwM0ZOpZ/vAlD6Csv/DplY92nZs1vHSp2RDVHq6IFI
-IY8r4D96F4ocMmptiPuXifjDkGbXPqfnJhwhaMA=
+MIIFuDCCA6CgAwIBAgICEJ4wDQYJKoZIhvcNAQENBQAwgaYxCzAJBgNVBAYTAkNI
+MR8wHQYDVQQIDBZBcHBlbnplbGwgQXVzc2VycmhvZGVuMRAwDgYDVQQHDAdIZXJp
+c2F1MRMwEQYDVQQKDAouL1NoYWRlLnNoMQwwCgYDVQQLDANTZWMxIzAhBgNVBAMM
+Gi4vU2hhZGUuc2ggSW50ZXJtZWRpYXRlIENBMRwwGgYJKoZIhvcNAQkBFg1jZXJ0
+QHNoYWRlLnNoMB4XDTIzMDgyMjE1MTUzNVoXDTI1MDgyMTE1MTUzNVowgYQxCzAJ
+BgNVBAYTAkNIMRAwDgYDVQQIDAdIZXJpc2F1MQswCQYDVQQHDAJBUjETMBEGA1UE
+CgwKLi9TaGFkZS5zaDEMMAoGA1UECwwDU2VjMRUwEwYDVQQDDAxvdGEuc2hhZGUu
+c2gxHDAaBgkqhkiG9w0BCQEWDWNlcnRAc2hhZGUuc2gwWTATBgcqhkjOPQIBBggq
+hkjOPQMBBwNCAAQ7euK0FsvGIAnXc1ivbuh+D4zcf0bI4ZPNKLuDRqRsH/jR2OHy
+rbK6KQmDV06ha2eHElCM4CkJ+K25alYYEVFno4IB2TCCAdUwCQYDVR0TBAIwADAR
+BglghkgBhvhCAQEEBAMCBkAwLAYJYIZIAYb4QgENBB8WHS4vU2hhZGUuc2ggU2Vy
+dmVyIENlcnRpZmljYXRlMB0GA1UdDgQWBBRK1g0gCTT9gtPEGJQw9ysD+e7srzCB
+vQYDVR0jBIG1MIGygBRHXkFFC5ngBPJt9rNL0jWpcC99QKGBlaSBkjCBjzELMAkG
+A1UEBhMCREUxDzANBgNVBAgMBkJheWVybjERMA8GA1UEBwwITXVlbmNoZW4xEzAR
+BgNVBAoMCi4vU2hhZGUuc2gxDDAKBgNVBAsMA1NlYzEbMBkGA1UEAwwSLi9TaGFk
+ZS5zaCBSb290IENBMRwwGgYJKoZIhvcNAQkBFg1jZXJ0QHNoYWRlLnNoggIQATAO
+BgNVHQ8BAf8EBAMCBaAwEwYDVR0lBAwwCgYIKwYBBQUHAwEwOAYDVR0fBDEwLzAt
+oCugKYYnaHR0cDovL2NybC5zaGFkZS5zaC9zaGFkZS1pbnRlci1jcmwucGVtMDAG
+CCsGAQUFBwEBBCQwIjAgBggrBgEFBQcwAYYUaHR0cDovL29jc3Auc2hhZGUuc2gw
+FwYDVR0RBBAwDoIMb3RhLnNoYWRlLnNoMA0GCSqGSIb3DQEBDQUAA4ICAQA1+de6
+zGZ9lcKQlH5mJ6Raq88cFmKHmTKRAGQMmkgIEX2nR6rHLe8Wq0icbzwLL84dZF3r
+Tps8Mjg3T6CjSW5BY2XfIp3284xgPnd0loGYHBv5zxZRZeVNQMAnEd4s0UrFWy39
+fjGSTzSC6yE40LHQkosAIQFmnmVJoNGLB1qUQ1rUaITMzqornVhMK3lnpUlf+P7r
+PKVlm0hgfn/35j3Gmu8oJ8glQGh7wN3+SdPD9Qu7ZxmPZX1sMOmUH1Y//V3jU7VV
+MzNqfOem7lo7ySP3rp3A3cz3JvKsvY088Lw4BFShdJcbmxWeb5+MXdj6dGahGSmp
+uz1NkJD7nKk+o8e6j/w/ZGUgjXAzHJk8TaP/SLeK7abLnKvLE3LkzMkkjaPs8nB+
+dGB/sAl2emiNdczQoFkRGDHZV3VyBLA2/3MJHaoUBCPkV2hY/oKVaiUufGD2ov4G
+qdX3MeJal1Wmjho4XN3rfJ4mJyymgspvwlkUA/IZHRs0LzcZ7YKZidfu1dX6yNSy
+Wc5Zi798gUtVnSIpdN3TPgGYz5uYLleSPqQDbnkdrGNtDQeXy+7ROGOvcyM9xx3c
+aAOEZnCUmWqyiEf7hyH5R5odQVMZ0/o6S45UHv9iEPXYNJa/WNjRanrngCL4DXLm
+pGNltTDO8/tieYPvU9eLmQOtvcbr0ZZQ3nj3fw==
 -----END CERTIFICATE-----
 )EOF";
 
 static const char *FALLBACK_OTA_CERT = R"EOF(
 -----BEGIN CERTIFICATE-----
-MIIDeTCCAmGgAwIBAgIUVVQV77r10CIDzeIiJGof4TbN6c8wDQYJKoZIhvcNAQEL
-BQAwTDELMAkGA1UEBhMCTkwxCzAJBgNVBAgMAlpIMRUwEwYDVQQKDAx3YXJkcml2
-ZXIudWsxGTAXBgNVBAMMEG90YS53YXJkcml2ZXIudWswHhcNMjMwNzA4MTc0NjIx
-WhcNMjUwMjI3MTc0NjIxWjBMMQswCQYDVQQGEwJOTDELMAkGA1UECAwCWkgxFTAT
-BgNVBAoMDHdhcmRyaXZlci51azEZMBcGA1UEAwwQb3RhLndhcmRyaXZlci51azCC
-ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAOIc25lsZ2DUBkPgXh79wJK9
-qm4SbpznQXfhevCOQvQrIk3aD2K1J2C+6hK8ORzl8YYyu5KRWWf9t3XrB2PHWw5c
-t4/LhXl/DXSE25RHqr9+ZW2fv26/1p8rjOY7tA2iTGDrBkuED9pQL9lJcBty4In3
-tWP/eUQezmKsMLBTTRRwN3EvylwOikIpK6nEsxQ3SxMp2lq7lVg5g5aGWb9OYzCY
-kcglSJf6bTlmyQQz/qPJ9zyyHGogL8ktSqcutAPRMXmMUvpeMtABH4Ej75etrjQp
-8xp3pbRCoKJtVWd0x48sY4vLXhqNRf+GuXrJTK1CldmAyIhUmNHYzYde0BS53GsC
-AwEAAaNTMFEwHQYDVR0OBBYEFJbqVybpgKmbP50jP93J8/k6DxDMMB8GA1UdIwQY
-MBaAFJbqVybpgKmbP50jP93J8/k6DxDMMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZI
-hvcNAQELBQADggEBADdYOy4mUdmfBzBhJV5pS1ch+AzRD9dTtP/wP9RdzzXXy03t
-54DuM9Xld2evRbhKRRvT1r5GaWoPVWgg7D0Iy4yw08Q91AaOhOpknRyL4KJm4mYs
-4Y9hcGn0dqFsTkRqCkPxTDi0bE9n2ssNsjYupHKSzawM+ESTcXDrAACyAwGLOvvZ
-/pVgZwdi/DGnFk7hn9s9A5+regXDRnUt36TDH2ArAdGHJIl64n+UtpOCoYUIbRA+
-XECvNDA4pMiGiTyH3kPsCeoVK+PY7YX1TMg9gY3QbobSHh4LJ2zH6I+kqDhej/Nr
-f0PDdGbXj3H6v/r3fk8syofQM1stfmta/HVCBAo=
+MIIFuDCCA6CgAwIBAgICEJ4wDQYJKoZIhvcNAQENBQAwgaYxCzAJBgNVBAYTAkNI
+MR8wHQYDVQQIDBZBcHBlbnplbGwgQXVzc2VycmhvZGVuMRAwDgYDVQQHDAdIZXJp
+c2F1MRMwEQYDVQQKDAouL1NoYWRlLnNoMQwwCgYDVQQLDANTZWMxIzAhBgNVBAMM
+Gi4vU2hhZGUuc2ggSW50ZXJtZWRpYXRlIENBMRwwGgYJKoZIhvcNAQkBFg1jZXJ0
+QHNoYWRlLnNoMB4XDTIzMDgyMjE1MTUzNVoXDTI1MDgyMTE1MTUzNVowgYQxCzAJ
+BgNVBAYTAkNIMRAwDgYDVQQIDAdIZXJpc2F1MQswCQYDVQQHDAJBUjETMBEGA1UE
+CgwKLi9TaGFkZS5zaDEMMAoGA1UECwwDU2VjMRUwEwYDVQQDDAxvdGEuc2hhZGUu
+c2gxHDAaBgkqhkiG9w0BCQEWDWNlcnRAc2hhZGUuc2gwWTATBgcqhkjOPQIBBggq
+hkjOPQMBBwNCAAQ7euK0FsvGIAnXc1ivbuh+D4zcf0bI4ZPNKLuDRqRsH/jR2OHy
+rbK6KQmDV06ha2eHElCM4CkJ+K25alYYEVFno4IB2TCCAdUwCQYDVR0TBAIwADAR
+BglghkgBhvhCAQEEBAMCBkAwLAYJYIZIAYb4QgENBB8WHS4vU2hhZGUuc2ggU2Vy
+dmVyIENlcnRpZmljYXRlMB0GA1UdDgQWBBRK1g0gCTT9gtPEGJQw9ysD+e7srzCB
+vQYDVR0jBIG1MIGygBRHXkFFC5ngBPJt9rNL0jWpcC99QKGBlaSBkjCBjzELMAkG
+A1UEBhMCREUxDzANBgNVBAgMBkJheWVybjERMA8GA1UEBwwITXVlbmNoZW4xEzAR
+BgNVBAoMCi4vU2hhZGUuc2gxDDAKBgNVBAsMA1NlYzEbMBkGA1UEAwwSLi9TaGFk
+ZS5zaCBSb290IENBMRwwGgYJKoZIhvcNAQkBFg1jZXJ0QHNoYWRlLnNoggIQATAO
+BgNVHQ8BAf8EBAMCBaAwEwYDVR0lBAwwCgYIKwYBBQUHAwEwOAYDVR0fBDEwLzAt
+oCugKYYnaHR0cDovL2NybC5zaGFkZS5zaC9zaGFkZS1pbnRlci1jcmwucGVtMDAG
+CCsGAQUFBwEBBCQwIjAgBggrBgEFBQcwAYYUaHR0cDovL29jc3Auc2hhZGUuc2gw
+FwYDVR0RBBAwDoIMb3RhLnNoYWRlLnNoMA0GCSqGSIb3DQEBDQUAA4ICAQA1+de6
+zGZ9lcKQlH5mJ6Raq88cFmKHmTKRAGQMmkgIEX2nR6rHLe8Wq0icbzwLL84dZF3r
+Tps8Mjg3T6CjSW5BY2XfIp3284xgPnd0loGYHBv5zxZRZeVNQMAnEd4s0UrFWy39
+fjGSTzSC6yE40LHQkosAIQFmnmVJoNGLB1qUQ1rUaITMzqornVhMK3lnpUlf+P7r
+PKVlm0hgfn/35j3Gmu8oJ8glQGh7wN3+SdPD9Qu7ZxmPZX1sMOmUH1Y//V3jU7VV
+MzNqfOem7lo7ySP3rp3A3cz3JvKsvY088Lw4BFShdJcbmxWeb5+MXdj6dGahGSmp
+uz1NkJD7nKk+o8e6j/w/ZGUgjXAzHJk8TaP/SLeK7abLnKvLE3LkzMkkjaPs8nB+
+dGB/sAl2emiNdczQoFkRGDHZV3VyBLA2/3MJHaoUBCPkV2hY/oKVaiUufGD2ov4G
+qdX3MeJal1Wmjho4XN3rfJ4mJyymgspvwlkUA/IZHRs0LzcZ7YKZidfu1dX6yNSy
+Wc5Zi798gUtVnSIpdN3TPgGYz5uYLleSPqQDbnkdrGNtDQeXy+7ROGOvcyM9xx3c
+aAOEZnCUmWqyiEf7hyH5R5odQVMZ0/o6S45UHv9iEPXYNJa/WNjRanrngCL4DXLm
+pGNltTDO8/tieYPvU9eLmQOtvcbr0ZZQ3nj3fw==
 -----END CERTIFICATE-----
+
 )EOF";
 
 // END CERTIFICATES
@@ -220,7 +237,7 @@ String ota_get_url(String url, String write_to=""){
     Serial.println("primary cert");
     httpsclient.setCACert(PRIMARY_OTA_CERT);
   }
-  if (!httpsclient.connect("ota.wardriver.uk", 443)){
+  if (!httpsclient.connect("ota.shade.sh", 443)){
     Serial.println("failed");
     if (!use_fallback_cert){
       Serial.println("Will retry using fallback cert");
@@ -233,7 +250,7 @@ String ota_get_url(String url, String write_to=""){
     httpsclient.print("GET ");
     httpsclient.print(url);
     httpsclient.println(" HTTP/1.0");
-    httpsclient.println("Host: ota.wardriver.uk");
+    httpsclient.println("Host: ota.shade.sh");
     httpsclient.println("Connection: close");
     httpsclient.print("User-Agent: ");
     httpsclient.print(device_type_string());
@@ -1798,17 +1815,19 @@ void lcd_show_stats(){
     ble_did_block = true;
   }
   clear_display();
-  display.print("WiFi:");
+  display.print("WiFi 2G:");
   display.print(disp_wifi_count);
   if (wifi_did_block){
     display.print("X");
   }
+  display.println();
   if (is_5ghz){
-    display.print("|");
+    display.print("WiFi 5G:");
     display.print(count_5ghz);
   }
+  display.println();
   if (int(temperature) != 0){
-    display.print(" T:");
+    display.print("Temperature:");
     display.print(temperature);
     display.print("c");
   }
