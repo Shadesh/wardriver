@@ -1,7 +1,10 @@
 
-# wardriver.uk Rev3
+# wardriver.uk Rev3 Shade Mod
 
 ## Introduction
+
+This is basically the Wardriver.uk REV3 but modified for bigger display, so rearrange the text on the display, changed to own OTA server.
+Its planned to remove GSM completely and make this a 5GHZ branch.
 
 This repository is for the 3rd revision of the wardriver.uk created by [Joseph Hewitt](https://twitter.com/jhewitt_net). The wardriver.uk scans for nearby WiFi networks and Bluetooth devices and logs information about them to a CSV file which can be uploaded to [Wigle.net](https://wigle.net). A fully assembled Wardriver features 2 ESP32 modules, GPS, a SIM800L GSM module, an i2c LCD, a DS18B20 temperature sensor, and an SPI micro SD card reader/writer.
 
